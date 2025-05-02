@@ -1,0 +1,38 @@
+{
+  "name": "akamai-oidc-edgeworker",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "main.ts",
+  "private": true,
+  "scripts": {
+    "build-babel": "babel src -d dist/babel",
+    "build-webpack": "webpack",
+    "test": "vitest",
+    "coverage": "vitest run --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eddgrant/edgeworker-oidc.git"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/eddgrant/edgeworker-oidc/issues"
+  },
+  "homepage": "https://github.com/eddgrant/edgeworker-oidc#readme",
+  "description": "",
+  "devDependencies": {
+    "@babel/cli": "^7.27.1",
+    "@babel/core": "^7.27.1",
+    "@babel/preset-env": "^7.27.1",
+    "babel-loader": "^10.0.0",
+    "chai": "^5.2.0",
+    "ts-loader": "^9.5.2",
+    "vitest": "^3.1.2",
+    "webpack": "^5.99.7",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "@types/akamai-edgeworkers": "^1.1.18"
+  }
+}
