@@ -1,7 +1,7 @@
 ////////////////////////
 // START lib/edgeauth.js
 ////////////////////////
-import { CryptoJS } from 'hmac.js';
+import { CryptoJS } from './hmac.js';
 
 class EdgeAuth {
     constructor(options) {

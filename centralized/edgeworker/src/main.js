@@ -6,11 +6,12 @@ Purpose:  OpenID Connect login  verification at the edge
 
 */
 /// <reference types="akamai-edgeworkers"/>
+
 import { httpRequest } from 'http-request';
 import { createResponse } from 'create-response';
-import URLSearchParams from 'url-search-params'; 
+import URLSearchParams from 'url-search-params';
 import { Cookies, SetCookie } from 'cookies';
-import { EdgeAuth } from "auth/edgeauth.js";
+import { EdgeAuth } from "./auth/edgeauth.js";
 
 
 // Utilities - randomstring
@@ -205,11 +206,11 @@ export async function responseProvider (request) {
 
   if (request.path.endsWith('/callback')) {
     return oidcCallback(oidcContext, request);
-  } 
+  }
   
   //if (request.path.endsWith('/logout')) {
   //  return oidcLogout(request);
-  //}  
+  //}
 
   return Promise.resolve(createResponse(404, {'Content-Type': ['application/text']},`No route for ${request.url}`));
 }
