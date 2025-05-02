@@ -27,12 +27,14 @@
     "@babel/preset-env": "^7.27.1",
     "babel-loader": "^10.0.0",
     "chai": "^5.2.0",
+    "edgeworkers-jest-mocks": "^1.0.29",
     "ts-loader": "^9.5.2",
     "vitest": "^3.1.2",
     "webpack": "^5.99.7",
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "@types/akamai-edgeworkers": "^1.1.18"
+    "@types/akamai-edgeworkers": "^1.1.18",
+    "typescript": "^5.8.3"
   }
 }

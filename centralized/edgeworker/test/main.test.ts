@@ -1,6 +1,7 @@
 import {describe, it, vi, expect, beforeEach} from 'vitest'
 import {IResponse, ResponseBuilder} from '../src/types/response'
 import {RequestBuilder} from "../src/types/request";
+import {createResponse} from "create-response";
 
 import {responseProvider} from "../src/main.js";
 
@@ -18,6 +19,9 @@ describe('OIDC Response Provider', () => {
         ]));
         const responseStatusCode = vi.hoisted(() => 404);
 
+        //vi.mock('create-response')
+        vi.mock('response')
+
         vi.mock('create-response', () => {
             const response = new ResponseBuilder()
                 .withStatus(responseStatusCode)
@@ -34,9 +38,11 @@ describe('OIDC Response Provider', () => {
         const requestMock = vi.mocked(request, true)
 
         // When
-        const returnedResponse: IResponse = await responseProvider(requestMock);
+        const returnedResponse : IResponse = await responseProvider(requestMock);
 
         // Then
+        expect(createResponse).toHaveBeenCalledWith(404, {'Content-Type': ['application/text']},`No route for ${request.url}`)
+
         expect(returnedResponse.status).toBe(responseStatusCode)
         expect(returnedResponse.getHeaders()).toStrictEqual(responseHeaders)
     });

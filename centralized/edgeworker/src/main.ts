@@ -7,11 +7,11 @@ Purpose:  OpenID Connect login  verification at the edge
 */
 /// <reference types="akamai-edgeworkers"/>
 
-import { httpRequest } from 'http-request';
+//import { httpRequest } from 'http-request';
 import { createResponse } from 'create-response';
-import URLSearchParams from 'url-search-params';
-import { Cookies, SetCookie } from 'cookies';
-import { EdgeAuth } from "./auth/edgeauth.js";
+//import URLSearchParams from 'url-search-params';
+//import { Cookies, SetCookie } from 'cookies';
+//import { EdgeAuth } from "./auth/edgeauth.js";
 
 
 // Utilities - randomstring
@@ -78,13 +78,13 @@ async function oidcLogin(oidcContext, request) {
   var cookList = [];
 
   // Setup redirect URL
-  if (params.get('url')) 
+  if (params.get('url'))
     cookList.push(newCookie('oidcurl', params.get('url'), oidcContext.basedir).toHeader());
-  
+
   // Generate and store a nonce
   var nonce = randomString(8);
   cookList.push(newCookie('nonce', nonce, oidcContext.basedir).toHeader());
-  
+
   responseHeaders["set-cookie"] = cookList;
   responseHeaders.location = [ `${oidcContext.auth}?client_id=${oidcContext.clientId}&nonce=${nonce}&redirect_uri=${oidcContext.redirect}&response_type=code&scope=openid+email` ];
   return Promise.resolve(createResponse(302, responseHeaders, ''));
@@ -116,7 +116,7 @@ async function oidcCallback (oidcContext, request) {
       });
 
     if (tokenResponse.ok && redirecturl != 'debug_break') {
-      var tokenResult = await tokenResponse.json(); 
+      var tokenResult = await tokenResponse.json();
 
       var jwtId = jwt2json(tokenResult.id_token);
       tokenResult.id_decode = jwtId;
@@ -169,11 +169,11 @@ async function oidcCallback (oidcContext, request) {
         failureContent.url = redirecturl;
       } catch (err) {
         failureContent.error = "callback_failure";
-        failureStatus = tokenResponse.status;      
+        failureStatus = tokenResponse.status;
         failureContent.description = "callback received indicates error";
         failureContent.details = x;
         failureContent.path = `${request.scheme}://${request.host}${oidcContext.basedir}/token`
-        failureContent.params = tokenParams;  
+        failureContent.params = tokenParams;
       }
     }
   } else { // no code given or debug_block requested
@@ -183,12 +183,12 @@ async function oidcCallback (oidcContext, request) {
 
   // Response for failures
   return Promise.resolve(
-    createResponse(failureStatus, {'content-type': ['application/json']}, JSON.stringify(failureContent)));  
+    createResponse(failureStatus, {'content-type': ['application/json']}, JSON.stringify(failureContent)));
 }
 
 // MAIN entry point, configuration and routing
 export async function responseProvider (request) {
-  var oidcContext = {};
+  /*var oidcContext = {};
   oidcContext.basedir = request.path.match(/.*\//)[0];
   oidcContext.base = oidcContext.basedir.slice(1,-1).replaceAll('/','_').toUpperCase();
   oidcContext.redirect = `https://${request.host}${oidcContext.basedir}callback`;
@@ -198,8 +198,8 @@ export async function responseProvider (request) {
   oidcContext.clientId = request.getVariable(`PMUSER_${oidcContext.base}_CLIENTID`);
   oidcContext.clientSecret = request.getVariable(`PMUSER_${oidcContext.base}_SECRET`);
   oidcContext.auth = request.getVariable(`PMUSER_${oidcContext.base}_AUTH_URL`);
-  oidcContext.domain = request.host.replace(/^[^.]+\./g, '');
-  
+  oidcContext.domain = request.host.replace(/^[^.]+\./g, '');*/
+
   if (request.path.endsWith('/login')) {
     return oidcLogin(oidcContext, request);
   }
@@ -207,7 +207,7 @@ export async function responseProvider (request) {
   if (request.path.endsWith('/callback')) {
     return oidcCallback(oidcContext, request);
   }
-  
+
   //if (request.path.endsWith('/logout')) {
   //  return oidcLogout(request);
   //}

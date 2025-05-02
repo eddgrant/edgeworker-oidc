@@ -1,6 +1,13 @@
 {
   "compilerOptions": {
-    "target": "es6",
-    "moduleResolution": "node"
+    "module": "es2022",
+    "target": "es2022",
+    "noImplicitAny": false,
+    "outDir": "built",
+    "rootDir": ".",
+    "sourceMap": false
   },
+  "exclude": [
+    "node_modules"
+  ]
 }
