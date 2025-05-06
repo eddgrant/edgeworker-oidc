@@ -1,6 +1,6 @@
 import {describe, it, vi, expect, beforeEach} from 'vitest'
-import {IResponse, ResponseBuilder} from '../src/types/response'
-import {RequestBuilder} from "../src/types/request";
+import {ResponseBuilder} from '../src/types/response.js'
+import {RequestBuilder} from "../src/types/request.js";
 import {createResponse} from "create-response";
 
 import {responseProvider} from "../src/main.js";
@@ -38,7 +38,7 @@ describe('OIDC Response Provider', () => {
         const requestMock = vi.mocked(request, true)
 
         // When
-        const returnedResponse : IResponse = await responseProvider(requestMock);
+        const returnedResponse : any = await responseProvider(requestMock);
 
         // Then
         expect(createResponse).toHaveBeenCalledWith(404, {'Content-Type': ['application/text']},`No route for ${request.url}`)
