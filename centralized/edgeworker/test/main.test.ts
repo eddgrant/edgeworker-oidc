@@ -1,9 +1,16 @@
-import {describe, it, vi, expect, beforeEach} from 'vitest'
+/// <reference types="akamai-edgeworkers"/>
+
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 import {ResponseBuilder} from '../src/types/response.js'
 import {RequestBuilder} from "../src/types/request.js";
 import {createResponse} from "create-response";
 
 import {responseProvider} from "../src/main.js";
+
+const responseHeaders = new Map<string, string>([
+    ["x-foo", "x-bar"]
+]);
+const notFoundStatusCode = 404;
 
 describe('OIDC Response Provider', () => {
 
@@ -13,26 +20,11 @@ describe('OIDC Response Provider', () => {
 
     it("should return 404 for unknown path", async () => {
         // Given
-        //https://bentilling.com/a-practical-guide-to-mocking-svelte-stores-with-vitest
-        const responseHeaders = vi.hoisted(() => new Map<string, string>([
-            ["x-foo", "x-bar"]
-        ]));
-        const responseStatusCode = vi.hoisted(() => 404);
-
-        //vi.mock('create-response')
+        vi.mock('create-response')
         vi.mock('response')
 
-        vi.mock('create-response', () => {
-            const response = new ResponseBuilder()
-                .withStatus(responseStatusCode)
-                .withHeaders(responseHeaders)
-                .build()
-            const responseMock = vi.mocked(response, true)
-            return {
-                default: {createResponse: vi.fn()},
-                namedExport: vi.fn(),
-                createResponse: vi.fn(() => responseMock),
-            }
+        createResponse.mockImplementation(function () {
+            return new ResponseBuilder().withStatus(notFoundStatusCode).withHeaders(responseHeaders).build()
         })
         const request = new RequestBuilder().withDefaults().build()
         const requestMock = vi.mocked(request, true)
@@ -42,8 +34,7 @@ describe('OIDC Response Provider', () => {
 
         // Then
         expect(createResponse).toHaveBeenCalledWith(404, {'Content-Type': ['application/text']},`No route for ${request.url}`)
-
-        expect(returnedResponse.status).toBe(responseStatusCode)
+        expect(returnedResponse.status).toBe(notFoundStatusCode)
         expect(returnedResponse.getHeaders()).toStrictEqual(responseHeaders)
     });
 });

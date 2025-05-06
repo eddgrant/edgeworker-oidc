@@ -92,9 +92,8 @@ export class RequestBuilder {
     private host: string;
     private method: string;
     private path: string;
-    private query: string;
+    private queryParams: Map<string, string> = new Map<string, string>();
     private scheme: string;
-    private url: string;
     private userLocation: UserLocation;
 
     withDefaults() {
@@ -123,8 +122,8 @@ export class RequestBuilder {
         return this;
     }
 
-    withQuery(query: string): RequestBuilder {
-        this.query = query;
+    withQueryParam(name: string, value: string): RequestBuilder {
+        this.queryParams.set(name, value);
         return this;
     }
 
@@ -158,11 +157,6 @@ export class RequestBuilder {
         return this;
     }
 
-    withUrl(url: string): RequestBuilder {
-        this.url = url;
-        return this;
-    }
-
     build(): Request {
         return {
             body: this.body,
@@ -173,10 +167,17 @@ export class RequestBuilder {
             host: this.host,
             method: this.method,
             path: this.path,
-            query: this.query,
+            query: this.getQueryParamsString(),
             scheme: this.scheme,
-            url: this.url,
+            url: `${this.path}${this.queryParams.size > 0 ? '?' + this.getQueryParamsString() : ''}`,
             userLocation: this.userLocation,
         }
     }
+
+    private getQueryParamsString() : string {
+        return Array.from(this.queryParams.entries())
+            .map(kv => kv.join("="))
+            .join("&")
+    }
+
 }
