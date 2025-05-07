@@ -55,7 +55,7 @@ export interface UserLocation {
 }
 
 // https://techdocs.akamai.com/edgeworkers/docs/request-object
-export interface Request {
+export interface IRequest {
     // addHeader: string
     // arrayBuffer: string
     readonly body?: ReadableStream
@@ -65,7 +65,7 @@ export interface Request {
     readonly device?: Device
     // getHeader: string
     // getHeaders: string
-    // getVariable: string
+    readonly getVariable: (name: string) => string
     readonly host: string
     // json: string
     readonly method: string
@@ -83,6 +83,57 @@ export interface Request {
     //wasTerminated: boolean
 }
 
+class Request implements IRequest {
+    readonly body?: ReadableStream;
+    readonly cacheKey?: CacheKey;
+    readonly clientIp: string;
+    readonly cpCode: number;
+    readonly device?: Device;
+    readonly host: string;
+    readonly method: string;
+    readonly path: string;
+    readonly query: string;
+    readonly scheme: string;
+    readonly url: string;
+    readonly userLocation?: UserLocation;
+    private readonly variables: Map<string, string> = new Map<string, string>();
+
+    constructor(
+        body: ReadableStream,
+        cacheKey: CacheKey,
+        clientIp: string,
+        cpCode: number,
+        device: Device,
+        host: string,
+        method: string,
+        path: string,
+        query: string,
+        scheme: string,
+        url: string,
+        userLocation: UserLocation,
+        variables: Map<string, string> = new Map<string, string>()
+    ) {
+        this.body = body;
+        this.cacheKey = cacheKey;
+        this.clientIp = clientIp;
+        this.cpCode = cpCode;
+        this.device = device;
+        this.host = host;
+        this.method = method;
+        this.path = path;
+        this.query = query;
+        this.scheme = scheme;
+        this.url = url;
+        this.userLocation = userLocation;
+        this.variables = variables;
+    }
+
+    getVariable(name: string): string {
+        return this.variables.get(name);
+    }
+
+}
+
 export class RequestBuilder {
     private body: ReadableStream;
     private cacheKey: CacheKey;
@@ -95,6 +146,7 @@ export class RequestBuilder {
     private queryParams: Map<string, string> = new Map<string, string>();
     private scheme: string;
     private userLocation: UserLocation;
+    private variables: Map<string, string> = new Map<string, string>();
 
     withDefaults() {
         this.host = "example.com"
@@ -124,6 +176,11 @@ export class RequestBuilder {
 
     withQueryParam(name: string, value: string): RequestBuilder {
         this.queryParams.set(name, value);
+        return this;
+    }
+
+    withVariable(name: string, value: string): RequestBuilder {
+        this.variables.set(name, value);
         return this;
     }
 
@@ -157,21 +214,22 @@ export class RequestBuilder {
         return this;
     }
 
-    build(): Request {
-        return {
-            body: this.body,
-            cacheKey: this.cacheKey,
-            clientIp: this.clientIp,
-            cpCode: this.cpCode,
-            device: this.device,
-            host: this.host,
-            method: this.method,
-            path: this.path,
-            query: this.getQueryParamsString(),
-            scheme: this.scheme,
-            url: `${this.path}${this.queryParams.size > 0 ? '?' + this.getQueryParamsString() : ''}`,
-            userLocation: this.userLocation,
-        }
+    build(): IRequest {
+        return new Request(
+            this.body,
+            this.cacheKey,
+            this.clientIp,
+            this.cpCode,
+            this.device,
+            this.host,
+            this.method,
+            this.path,
+            this.getQueryParamsString(),
+            this.scheme,
+            `${this.path}${this.queryParams.size > 0 ? '?' + this.getQueryParamsString() : ''}`,
+            this.userLocation,
+            this.variables
+        )
     }
 
     private getQueryParamsString() : string {
@@ -179,5 +237,4 @@ export class RequestBuilder {
             .map(kv => kv.join("="))
             .join("&")
     }
-
 }

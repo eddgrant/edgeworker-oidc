@@ -10,7 +10,7 @@ Purpose:  OpenID Connect login  verification at the edge
 //import { httpRequest } from 'http-request';
 import { createResponse } from 'create-response';
 //import URLSearchParams from 'url-search-params';
-//import { Cookies, SetCookie } from 'cookies';
+import { Cookies, SetCookie } from 'cookies';
 //import { EdgeAuth } from "./auth/edgeauth.js";
 
 
@@ -72,21 +72,28 @@ function jwt2json(s) {
 }
 
 // Auth flow, step 1: Initiate the login by redirection to the login endpoint and storing the login mode
-async function oidcLogin(oidcContext, request) {
-  var params = new URLSearchParams(request.query);
-  var responseHeaders = {};
-  var cookList = [];
+async function oidcLogin(oidcContext : Map<string, string>, request) {
+  const params = new URLSearchParams(request.query);
+  const cookieList : string[] = [];
 
   // Setup redirect URL
-  if (params.get('url'))
-    cookList.push(newCookie('oidcurl', params.get('url'), oidcContext.basedir).toHeader());
+  if (params.get('url')) {
+    cookieList.push(
+        newCookie('oidcurl', params.get('url'), oidcContext.get("basedir")).toHeader()
+    );
+  }
 
   // Generate and store a nonce
-  var nonce = randomString(8);
-  cookList.push(newCookie('nonce', nonce, oidcContext.basedir).toHeader());
+  const nonce = randomString(8);
+  cookieList.push(newCookie('nonce', nonce, oidcContext.get("basedir")).toHeader());
 
-  responseHeaders["set-cookie"] = cookList;
-  responseHeaders.location = [ `${oidcContext.auth}?client_id=${oidcContext.clientId}&nonce=${nonce}&redirect_uri=${oidcContext.redirect}&response_type=code&scope=openid+email` ];
+  const responseHeaders = {
+    "set-cookie": cookieList,
+    "location": [
+      `${oidcContext.get("auth")}?client_id=${oidcContext.get("clientId")}&nonce=${nonce}&redirect_uri=${oidcContext.get("redirect")}&response_type=code&scope=openid+email`
+    ]
+  };
+
   return Promise.resolve(createResponse(302, responseHeaders, ''));
 }
 
@@ -188,17 +195,18 @@ async function oidcCallback (oidcContext, request) {
 
 // MAIN entry point, configuration and routing
 export async function responseProvider (request) {
-  /*var oidcContext = {};
-  oidcContext.basedir = request.path.match(/.*\//)[0];
-  oidcContext.base = oidcContext.basedir.slice(1,-1).replaceAll('/','_').toUpperCase();
-  oidcContext.redirect = `https://${request.host}${oidcContext.basedir}callback`;
-
-  // Property Manager variables
-  oidcContext.akamaiSecret = request.getVariable(`PMUSER_${oidcContext.base}_AKSECRET`);
-  oidcContext.clientId = request.getVariable(`PMUSER_${oidcContext.base}_CLIENTID`);
-  oidcContext.clientSecret = request.getVariable(`PMUSER_${oidcContext.base}_SECRET`);
-  oidcContext.auth = request.getVariable(`PMUSER_${oidcContext.base}_AUTH_URL`);
-  oidcContext.domain = request.host.replace(/^[^.]+\./g, '');*/
+  const basedir = request.path.match(/.*\//)[0]
+  const base = basedir.slice(1,-1).replaceAll('/','_').toUpperCase()
+  const oidcContext = new Map<string, string>([
+      ["basedir", basedir],
+      ["base", base],
+      ["redirect", `https://${request.host}${basedir}callback`],
+      ["akamaiSecret", request.getVariable(`PMUSER_${base}_AKSECRET`)],
+      ["clientId", request.getVariable(`PMUSER_${base}_CLIENTID`)],
+      ["clientSecret", request.getVariable(`PMUSER_${base}_SECRET`)],
+      ["auth", request.getVariable(`PMUSER_${base}_AUTH_URL`)],
+      ["domain", request.host.replace(/^[^.]+\./g, '')],
+  ]);
 
   if (request.path.endsWith('/login')) {
     return oidcLogin(oidcContext, request);
