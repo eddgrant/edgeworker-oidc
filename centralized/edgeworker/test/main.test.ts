@@ -2,7 +2,7 @@
 
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 import {ResponseBuilder} from '../src/types/response.js'
-import {RequestBuilder} from "../src/types/request.js";
+import {ResponseProviderRequestBuilder} from "../src/types/request.js";
 import {createResponse} from "create-response";
 
 import {responseProvider} from "../src/main.js";
@@ -26,7 +26,7 @@ describe('OIDC Response Provider', () => {
         createResponse.mockImplementation(function () {
             return new ResponseBuilder().withStatus(notFoundStatusCode).withHeaders(responseHeaders).build()
         })
-        const request = new RequestBuilder().withDefaults().build()
+        const request = new ResponseProviderRequestBuilder().withDefaults().build()
         const requestMock = vi.mocked(request, true)
 
         // When
@@ -54,7 +54,7 @@ describe('OIDC Response Provider', () => {
         const authHost = "www.this-is-my-auth-url.com"
         const authPath = "/foo"
         const authUrl = `${authScheme}://${authHost}${authPath}`
-        const request = new RequestBuilder()
+        const request = new ResponseProviderRequestBuilder()
             .withHost(host)
             .withPath(path)
             .withVariable("PMUSER_MANDS_AKSECRET", akamaiSecret)

@@ -11,6 +11,7 @@ Purpose:  OpenID Connect login  verification at the edge
 import { createResponse } from 'create-response';
 //import URLSearchParams from 'url-search-params';
 import { Cookies, SetCookie } from 'cookies';
+import ResponseProviderRequest = EW.ResponseProviderRequest;
 //import { EdgeAuth } from "./auth/edgeauth.js";
 
 
@@ -35,14 +36,13 @@ async function jsonRequest(url) {
   return j;
 }
 
-// Create a cookie in one line
-function newCookie(name, val, path) {
-  var c = new SetCookie();
-  c.name = name;
-  c.value = val;
-  c.path = path;
-  c.secure = true;
-  return c;
+function newCookie(name: string, val: string, path: string) {
+  return new SetCookie({
+    "name": name,
+    "value": val,
+    "path": path,
+    "secure": true,
+  });
 }
 
 // Edgeworks don't support atob(), so we have to implement it ourselves
@@ -72,25 +72,25 @@ function jwt2json(s) {
 }
 
 // Auth flow, step 1: Initiate the login by redirection to the login endpoint and storing the login mode
-async function oidcLogin(oidcContext : Map<string, string>, request) {
+async function oidcLogin(oidcContext : object, request: ResponseProviderRequest) {
   const params = new URLSearchParams(request.query);
   const cookieList : string[] = [];
 
   // Setup redirect URL
   if (params.get('url')) {
     cookieList.push(
-        newCookie('oidcurl', params.get('url'), oidcContext.get("basedir")).toHeader()
+        newCookie('oidcurl', params.get('url'), oidcContext.basedir).toHeader()
     );
   }
 
   // Generate and store a nonce
   const nonce = randomString(8);
-  cookieList.push(newCookie('nonce', nonce, oidcContext.get("basedir")).toHeader());
+  cookieList.push(newCookie('nonce', nonce, oidcContext.basedir).toHeader());
 
   const responseHeaders = {
     "set-cookie": cookieList,
     "location": [
-      `${oidcContext.get("auth")}?client_id=${oidcContext.get("clientId")}&nonce=${nonce}&redirect_uri=${oidcContext.get("redirect")}&response_type=code&scope=openid+email`
+      `${oidcContext.auth}?client_id=${oidcContext.clientId}&nonce=${nonce}&redirect_uri=${oidcContext.redirect}&response_type=code&scope=openid+email`
     ]
   };
 
@@ -194,19 +194,19 @@ async function oidcCallback (oidcContext, request) {
 }
 
 // MAIN entry point, configuration and routing
-export async function responseProvider (request) {
+export async function responseProvider(request: ResponseProviderRequest) {
   const basedir = request.path.match(/.*\//)[0]
-  const base = basedir.slice(1,-1).replaceAll('/','_').toUpperCase()
-  const oidcContext = new Map<string, string>([
-      ["basedir", basedir],
-      ["base", base],
-      ["redirect", `https://${request.host}${basedir}callback`],
-      ["akamaiSecret", request.getVariable(`PMUSER_${base}_AKSECRET`)],
-      ["clientId", request.getVariable(`PMUSER_${base}_CLIENTID`)],
-      ["clientSecret", request.getVariable(`PMUSER_${base}_SECRET`)],
-      ["auth", request.getVariable(`PMUSER_${base}_AUTH_URL`)],
-      ["domain", request.host.replace(/^[^.]+\./g, '')],
-  ]);
+  const base = basedir.slice(1,-1).split('/').join('_').toUpperCase()
+  const oidcContext = {
+    "basedir": basedir,
+    "base": base,
+    "redirect": `https://${request.host}${basedir}callback`,
+    "akamaiSecret": request.getVariable(`PMUSER_${base}_AKSECRET`),
+    "clientId": request.getVariable(`PMUSER_${base}_CLIENTID`),
+    "clientSecret": request.getVariable(`PMUSER_${base}_SECRET`),
+    "auth": request.getVariable(`PMUSER_${base}_AUTH_URL`),
+    "domain": request.host.replace(/^[^.]+\./g, ''),
+  };
 
   if (request.path.endsWith('/login')) {
     return oidcLogin(oidcContext, request);

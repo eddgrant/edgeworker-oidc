@@ -1,11 +1,8 @@
-export interface ReadableStream {
-    locked: boolean
-    cancel: boolean
-    getReader: any
-    pipeThrough: any
-    pipeTo: any
-    tee: any
-}
+import ResponseProviderRequest = EW.ResponseProviderRequest;
+import ReadableStream = EW.ReadableStreamEW;
+import Headers = EW.Headers;
+import UserLocation = EW.UserLocation;
+import Device = EW.Device;
 
 export interface CacheKey {
     excludeQueryString: boolean
@@ -16,94 +13,31 @@ export interface CacheKey {
     includeVariable: boolean
 }
 
-export interface Device {
-    brandName: string
-    modelName: string
-    marketingName: string
-    isWireless: boolean
-    isTablet: boolean
-    os: string
-    osVersion: string
-    mobileBrowser: string
-    mobileBrowserVersion: string
-    resolutionWidth: bigint
-    resolutionHeight: bigint
-    physicalScreenHeight: bigint
-    physicalScreenWidth: bigint
-    hasCookieSupport: boolean
-    hasAjaxSupport: boolean
-    hasFlashSupport: boolean
-    acceptsThirdPartyCookie: boolean
-    xhtmlSupportLevel: bigint
-    isMobile: boolean
-}
-
-export interface UserLocation {
-    latitude: string
-    longitude: string
-    continent: string
-    country: string
-    region: string
-    city: string
-    zipCode: string
-    dma: string
-    timezone: string
-    networkType: string
-    bandwidth: string
-    areaCodes: string[]
-    fips: string[]
-}
 
 // https://techdocs.akamai.com/edgeworkers/docs/request-object
-export interface IRequest {
-    // addHeader: string
-    // arrayBuffer: string
-    readonly body?: ReadableStream
-    readonly cacheKey?: CacheKey
-    readonly clientIp: string
-    readonly cpCode: number
-    readonly device?: Device
-    // getHeader: string
-    // getHeaders: string
-    readonly getVariable: (name: string) => string
-    readonly host: string
-    // json: string
-    readonly method: string
-    readonly path: string
-    readonly query: string
-    // removeHeader: string
-    // respondWith: string
-    // route: string
-    readonly scheme: string
-    // setHeader: string
-    // setVariable: string
-    // text: string
-    readonly url: string
-    readonly userLocation?: UserLocation
-    //wasTerminated: boolean
-}
 
-class Request implements IRequest {
-    readonly body?: ReadableStream;
+class ResponseProviderRequestImpl implements ResponseProviderRequest {
+    readonly body: ReadableStream;
     readonly cacheKey?: CacheKey;
     readonly clientIp: string;
     readonly cpCode: number;
-    readonly device?: Device;
+    readonly device: Device | undefined;
     readonly host: string;
     readonly method: string;
     readonly path: string;
-    readonly query: string;
     readonly scheme: string;
+    readonly query: string;
     readonly url: string;
-    readonly userLocation?: UserLocation;
+    readonly userLocation: UserLocation;
     private readonly variables: Map<string, string> = new Map<string, string>();
+    private readonly headers: Map<string, string | string[]> = new Map<string, string | string[]>();
 
     constructor(
         body: ReadableStream,
         cacheKey: CacheKey,
         clientIp: string,
         cpCode: number,
-        device: Device,
+        device: Device | undefined,
         host: string,
         method: string,
         path: string,
@@ -111,7 +45,8 @@ class Request implements IRequest {
         scheme: string,
         url: string,
         userLocation: UserLocation,
-        variables: Map<string, string> = new Map<string, string>()
+        variables: Map<string, string> = new Map<string, string>(),
+        headers: Map<string, string | string[]> = new Map<string, string | string[]>()
     ) {
         this.body = body;
         this.cacheKey = cacheKey;
@@ -126,20 +61,52 @@ class Request implements IRequest {
         this.url = url;
         this.userLocation = userLocation;
         this.variables = variables;
+        this.headers = headers;
     }
 
+    // From ReadsBody
+    text(): Promise<string> {
+        return Promise.resolve("")
+    }
+
+    json(): Promise<any> {
+        return Promise.resolve(undefined)
+    }
+
+    arrayBuffer(): Promise<ArrayBuffer> {
+        return Promise.resolve(undefined)
+    }
+
+    // From ReadsHeaders
+    getHeader(name: string): string[] | null {
+        const headerValue = this.headers.get(name);
+        if (typeof headerValue === 'string') {
+            return [headerValue];
+        } else if (Array.isArray(headerValue)) {
+            return headerValue;
+        } else {
+            return null;
+        }
+    }
+
+    // From ReadAllHeader
+    getHeaders(): Headers {
+        throw new Error("Method not implemented.");
+    }
+
+    // From ReadsVariables
     getVariable(name: string): string {
         return this.variables.get(name);
     }
 
 }
 
-export class RequestBuilder {
+export class ResponseProviderRequestBuilder {
     private body: ReadableStream;
     private cacheKey: CacheKey;
     private clientIp: string;
     private cpCode: number;
-    private device: Device;
+    private device: Device | undefined;
     private host: string;
     private method: string;
     private path: string;
@@ -147,6 +114,7 @@ export class RequestBuilder {
     private scheme: string;
     private userLocation: UserLocation;
     private variables: Map<string, string> = new Map<string, string>();
+    private headers: Map<string, string | string[]> = new Map<string, string | string[]>();
 
     withDefaults() {
         this.host = "example.com"
@@ -154,68 +122,68 @@ export class RequestBuilder {
         return this;
     }
 
-    withMethod(method: string): RequestBuilder {
+    withMethod(method: string): ResponseProviderRequestBuilder {
         this.method = method;
         return this;
     }
 
-    withPath(path: string): RequestBuilder {
+    withPath(path: string): ResponseProviderRequestBuilder {
         this.path = path;
         return this;
     }
 
-    withHost(host: string): RequestBuilder {
+    withHost(host: string): ResponseProviderRequestBuilder {
         this.host = host;
         return this;
     }
 
-    withScheme(scheme: string): RequestBuilder {
+    withScheme(scheme: string): ResponseProviderRequestBuilder {
         this.scheme = scheme;
         return this;
     }
 
-    withQueryParam(name: string, value: string): RequestBuilder {
+    withQueryParam(name: string, value: string): ResponseProviderRequestBuilder {
         this.queryParams.set(name, value);
         return this;
     }
 
-    withVariable(name: string, value: string): RequestBuilder {
+    withVariable(name: string, value: string): ResponseProviderRequestBuilder {
         this.variables.set(name, value);
         return this;
     }
 
-    withClientIp(clientIp: string): RequestBuilder {
+    withClientIp(clientIp: string): ResponseProviderRequestBuilder {
         this.clientIp = clientIp;
         return this;
     }
 
-    withCpCode(cpCode: number): RequestBuilder {
+    withCpCode(cpCode: number): ResponseProviderRequestBuilder {
         this.cpCode = cpCode;
         return this;
     }
 
-    withDevice(device: Device): RequestBuilder {
+    withDevice(device: Device): ResponseProviderRequestBuilder {
         this.device = device;
         return this;
     }
 
-    withUserLocation(userLocation: UserLocation): RequestBuilder {
+    withUserLocation(userLocation: UserLocation): ResponseProviderRequestBuilder {
         this.userLocation = userLocation;
         return this;
     }
 
-    withCacheKey(cacheKey: CacheKey): RequestBuilder {
+    withCacheKey(cacheKey: CacheKey): ResponseProviderRequestBuilder {
         this.cacheKey = cacheKey;
         return this;
     }
 
-    withBody(body: ReadableStream): RequestBuilder {
+    withBody(body: ReadableStream): ResponseProviderRequestBuilder {
         this.body = body;
         return this;
     }
 
-    build(): IRequest {
-        return new Request(
+    build(): ResponseProviderRequestImpl {
+        return new ResponseProviderRequestImpl(
             this.body,
             this.cacheKey,
             this.clientIp,
@@ -228,7 +196,8 @@ export class RequestBuilder {
             this.scheme,
             `${this.path}${this.queryParams.size > 0 ? '?' + this.getQueryParamsString() : ''}`,
             this.userLocation,
-            this.variables
+            this.variables,
+            this.headers
         )
     }
 
