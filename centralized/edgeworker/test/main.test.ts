@@ -42,32 +42,7 @@ describe('OIDC Response Provider', () => {
         // Given
         vi.mock('create-response')
         vi.mock('response')
-
-        const mockSetCookieInstances = vi.hoisted(() => { return [] });
-        //TODO: How / can we refactor this out to the __mocks__ folder?
-        vi.mock('cookies', () => ({
-            SetCookie: vi.fn().mockImplementation((options: {
-                name: string,
-                value: string,
-                path: string,
-                secure?: boolean
-            }) => {
-                const instance = {
-                    name: options.name,
-                    value: options.value,
-                    path: options.path,
-                    secure: options.secure,
-                    toHeader: vi.fn(() => `__Secure-${options.name}="${options.value}"; path=${options.path}; Secure; HttpOnly`)
-                };
-                mockSetCookieInstances.push(instance);
-                return instance;
-            }),
-            Cookies: vi.fn().mockImplementation(() => ({ // Basic mock for Cookies constructor if used elsewhere
-                get: vi.fn(),
-                add: vi.fn(),
-                toHeader: vi.fn(() => [])
-            }))
-        }));
+        vi.mock('cookies')
 
         const host = "www.marksandspencer.com";
         const basePath = "/mands/";
