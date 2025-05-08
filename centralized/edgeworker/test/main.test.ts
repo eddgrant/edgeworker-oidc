@@ -40,13 +40,38 @@ describe('OIDC Response Provider', () => {
 
     it("A request to /login should return an OIDC login response", async () => {
         // Given
-        vi.mock('cookies')
         vi.mock('create-response')
         vi.mock('response')
 
+        const mockSetCookieInstances = vi.hoisted(() => { return [] });
+        //TODO: How / can we refactor this out to the __mocks__ folder?
+        vi.mock('cookies', () => ({
+            SetCookie: vi.fn().mockImplementation((options: {
+                name: string,
+                value: string,
+                path: string,
+                secure?: boolean
+            }) => {
+                const instance = {
+                    name: options.name,
+                    value: options.value,
+                    path: options.path,
+                    secure: options.secure,
+                    toHeader: vi.fn(() => `__Secure-${options.name}="${options.value}"; path=${options.path}; Secure; HttpOnly`)
+                };
+                mockSetCookieInstances.push(instance);
+                return instance;
+            }),
+            Cookies: vi.fn().mockImplementation(() => ({ // Basic mock for Cookies constructor if used elsewhere
+                get: vi.fn(),
+                add: vi.fn(),
+                toHeader: vi.fn(() => [])
+            }))
+        }));
+
         const host = "www.marksandspencer.com";
-        const basePath = "/mands";
-        const path = `${basePath}/login`;
+        const basePath = "/mands/";
+        const path = `${basePath}login`;
         const akamaiSecret = "This is my Akamai Secret"
         const clientId = "This is my Client Id"
         const secret = "This is my Secret"
@@ -54,9 +79,11 @@ describe('OIDC Response Provider', () => {
         const authHost = "www.this-is-my-auth-url.com"
         const authPath = "/foo"
         const authUrl = `${authScheme}://${authHost}${authPath}`
+        const oidcUrl = "https://this-is-my-oidc-url.com/"
         const request = new ResponseProviderRequestBuilder()
             .withHost(host)
             .withPath(path)
+            .withQueryParam("url", oidcUrl)
             .withVariable("PMUSER_MANDS_AKSECRET", akamaiSecret)
             .withVariable("PMUSER_MANDS_CLIENTID", clientId)
             .withVariable("PMUSER_MANDS_SECRET", secret)
@@ -72,20 +99,28 @@ describe('OIDC Response Provider', () => {
         expect(createResponseCalls.length).toBe(1);
 
         const createResponseCallArguments = createResponseCalls[0]
-        const providedStatusCode = createResponseCallArguments[0]
-        expect(providedStatusCode).toBe(302)
+        const statusCode = createResponseCallArguments[0]
+        expect(statusCode).toBe(302)
 
-        const providedResponseHeaders = createResponseCallArguments[1]
-        const setCookieResponseHeader = providedResponseHeaders['set-cookie'][0]
-        expect(setCookieResponseHeader).toBeUndefined() //TODO: This is probably wrong and needs to be updated.
+        const responseHeaders = createResponseCallArguments[1]
+        const setCookieResponseHeaders = responseHeaders['set-cookie']
+        expect(setCookieResponseHeaders.length).toBe(2)
 
-        const locationResponseHeader = new URL(providedResponseHeaders['location'][0])
+        const oidcCookieResponseHeader = setCookieResponseHeaders[0]
+        // This is a rather crude way of asserting that the expected parameters were passed to the SetCookie constructor.
+        expect(oidcCookieResponseHeader).toBe(`__Secure-oidcurl="${oidcUrl}"; path=${basePath}; Secure; HttpOnly`)
+
+        const nonceResponseHeader = setCookieResponseHeaders[1]
+        // This is a rather crude way of asserting that the expected parameters were passed to the SetCookie constructor.
+        expect(nonceResponseHeader).toMatch(new RegExp(`^__Secure-nonce="[a-z0-9]{8}"; path=${basePath}; Secure; HttpOnly$`))
+
+        const locationResponseHeader = new URL(responseHeaders['location'][0])
         expect(locationResponseHeader.protocol).toMatch(new RegExp(`^${authScheme}?`))
         expect(locationResponseHeader.host).toMatch(authHost)
         expect(locationResponseHeader.pathname).toMatch(authPath)
         expect(locationResponseHeader.searchParams.get("client_id")).toMatch(clientId)
         expect(locationResponseHeader.searchParams.get("nonce").length).toBe(8)
-        expect(locationResponseHeader.searchParams.get("redirect_uri")).toMatch(`https://${host}${basePath}/callback`)
+        expect(locationResponseHeader.searchParams.get("redirect_uri")).toMatch(`https://${host}${basePath}callback`)
         expect(locationResponseHeader.searchParams.get("response_type")).toMatch("code")
         expect(locationResponseHeader.searchParams.get("scope")).toMatch("openid email")
 
