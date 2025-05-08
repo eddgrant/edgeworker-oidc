@@ -14,6 +14,16 @@ import { Cookies, SetCookie } from 'cookies';
 import ResponseProviderRequest = EW.ResponseProviderRequest;
 //import { EdgeAuth } from "./auth/edgeauth.js";
 
+type OIDCContext = {
+  basedir: string;
+  base: string;
+  redirect: string;
+  akamaiSecret: string;
+  clientId: string;
+  clientSecret: string;
+  auth: string;
+  domain: string
+}
 
 // Utilities - randomstring
 function randomString(len) {
@@ -72,7 +82,7 @@ function jwt2json(s) {
 }
 
 // Auth flow, step 1: Initiate the login by redirection to the login endpoint and storing the login mode
-async function oidcLogin(oidcContext : object, request: ResponseProviderRequest) {
+async function oidcLogin(oidcContext : OIDCContext, request: ResponseProviderRequest) {
   const params = new URLSearchParams(request.query);
   const cookieList : string[] = [];
 
@@ -197,7 +207,7 @@ async function oidcCallback (oidcContext, request) {
 export async function responseProvider(request: ResponseProviderRequest) {
   const basedir = request.path.match(/.*\//)[0]
   const base = basedir.slice(1,-1).split('/').join('_').toUpperCase()
-  const oidcContext = {
+  const oidcContext: OIDCContext = {
     "basedir": basedir,
     "base": base,
     "redirect": `https://${request.host}${basedir}callback`,
