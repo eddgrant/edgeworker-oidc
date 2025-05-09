@@ -6,6 +6,8 @@ import {ResponseProviderRequestBuilder} from "../src/types/request.js";
 import {createResponse} from "create-response";
 
 import {responseProvider} from "../src/main.js";
+import {mockedCookiesGetFunction, mockSetCookieInstances} from "cookies";
+import {httpRequest, HttpResponse} from "http-request"
 
 const responseHeaders = new Map<string, string>([
     ["x-foo", "x-bar"]
@@ -29,10 +31,11 @@ describe('OIDC Response Provider', () => {
     });
 
     describe("404 tests", () => {
-        it("should return 404 for unknown path", async () => {
+        it("A request to an unsupported path returns a 404 response", async () => {
             // Given
             vi.mock('create-response')
             vi.mock('response')
+            vi.mock("url-search-params")
 
             createResponse.mockImplementation(function () {
                 return new ResponseBuilder().withStatus(notFoundStatusCode).withHeaders(responseHeaders).build()
@@ -51,11 +54,12 @@ describe('OIDC Response Provider', () => {
     });
 
     describe("/login tests", () => {
-        it("A request to /login should return an OIDC login response", async () => {
+        it("A request to /login returns an OIDC login response", async () => {
             // Given
             vi.mock('create-response')
             vi.mock('response')
             vi.mock('cookies')
+            vi.mock("url-search-params")
 
             const loginPath = `${basePath}login`;
             const request = new ResponseProviderRequestBuilder()
@@ -70,8 +74,7 @@ describe('OIDC Response Provider', () => {
             const requestMock = vi.mocked(request, true)
 
             // When
-            const returnedResponse : any = await responseProvider(requestMock);
-            //TODO: Would it be valuable to make assertions on the returnedResponse?
+            await responseProvider(requestMock);
 
             // Then
             const createResponseCalls = createResponse.mock.calls
@@ -112,6 +115,7 @@ describe('OIDC Response Provider', () => {
         it("A request to /callback returns a 400 response when no 'code' query parameter is provided", async () => {
             // Given
             vi.mock('create-response')
+            vi.mock("url-search-params")
 
             const callbackPath = `${basePath}callback`;
             const request = new ResponseProviderRequestBuilder()
@@ -122,7 +126,7 @@ describe('OIDC Response Provider', () => {
             const requestMock = vi.mocked(request, true)
 
             // When
-            const returnedResponse : any = await responseProvider(requestMock);
+            await responseProvider(requestMock);
 
             // Then
             const expectedResponseBody = {
@@ -132,19 +136,32 @@ describe('OIDC Response Provider', () => {
             expect(createResponse).toHaveBeenCalledWith(400, {'content-type': ['application/json']}, JSON.stringify(expectedResponseBody))
         })
 
-        it("A request to /callback should return an OIDC callback response", async () => {
-            //TODO: Implement this test.
-
+        it("A request to /callback returns a 403 response when the nonce in the JWT does not match the nonse in the cookie header ", async () => {
             // Given
             vi.mock('create-response')
-            // TODO: Mock cookies.get("oidcurl")
-            // TODO: Mock params.get("code")
-            // TODO: Mock request.getHeader('Cookie')
+            vi.mock('cookies')
+            vi.mock('http-request')
+            vi.mock("url-search-params")
+
+            mockedCookiesGetFunction.mockReturnValueOnce(oidcUrl)
+            mockedCookiesGetFunction.mockReturnValueOnce("ANonceValue")
+            const httpResponse = new HttpResponse()
+            httpResponse.ok.mockReturnedValueOnce = true
+            httpResponse.status.mockReturnedValueOnce = 200
+            const header = JSON.stringify({})
+            const payload = JSON.stringify({nonce: "ADifferentNonceValue"})
+            const signature = "signature"
+            httpResponse.json.mockResolvedValueOnce(Promise.resolve({id_token: `${btoa(header)}.${btoa(payload)}.${signature}`}))
+
+            httpRequest.mockResolvedValueOnce(Promise.resolve(httpResponse))
+
+            const code = "this-is-my-code"
             const callbackPath = `${basePath}callback`;
             const request = new ResponseProviderRequestBuilder()
                 .withHost(host)
                 .withPath(callbackPath)
                 .withQueryParam("url", oidcUrl)
+                .withQueryParam("code", code)
                 .withVariable("PMUSER_MANDS_AKSECRET", akamaiSecret)
                 .withVariable("PMUSER_MANDS_CLIENTID", clientId)
                 .withVariable("PMUSER_MANDS_SECRET", secret)
@@ -153,10 +170,56 @@ describe('OIDC Response Provider', () => {
             const requestMock = vi.mocked(request, true)
 
             // When
-            const returnedResponse : any = await responseProvider(requestMock);
-            //TODO: Would it be valuable to make assertions on the returnedResponse?
+            await responseProvider(requestMock);
 
             // Then
+            expect(createResponse).toHaveBeenCalledWith(403, {}, "Nonce failed")
         })
+
+        it("A request to /callback returns a 302 response, containing a secure token Cookie", async () => {
+            // Given
+            vi.mock('create-response')
+            vi.mock('cookies')
+            vi.mock('http-request')
+            vi.mock("url-search-params")
+
+            const nonceValue = "this-is-my-nonce-value"
+            mockedCookiesGetFunction.mockReturnValueOnce(oidcUrl)
+            mockedCookiesGetFunction.mockReturnValueOnce(nonceValue)
+            const httpResponse = new HttpResponse()
+            httpResponse.ok.mockReturnedValueOnce = true
+            httpResponse.status.mockReturnedValueOnce = 200
+            const header = JSON.stringify({})
+            const payload = JSON.stringify({nonce: nonceValue, email: "me@my-domain.com", hd: "this-is-my-salt-value"})
+            const signature = "signature"
+            httpResponse.json.mockResolvedValueOnce({
+                id_token: `${btoa(header)}.${btoa(payload)}.${signature}`,
+                expires_in: 3600
+            })
+
+            httpRequest.mockResolvedValueOnce(httpResponse)
+
+            const code = "this-is-my-code"
+            const callbackPath = `${basePath}callback`;
+            const request = new ResponseProviderRequestBuilder()
+                .withHost(host)
+                .withPath(callbackPath)
+                .withQueryParam("url", oidcUrl)
+                .withQueryParam("code", code)
+                .withVariable("PMUSER_MANDS_AKSECRET", akamaiSecret)
+                .withVariable("PMUSER_MANDS_CLIENTID", clientId)
+                .withVariable("PMUSER_MANDS_SECRET", secret)
+                .withVariable("PMUSER_MANDS_AUTH_URL", authUrl)
+                .build()
+            const requestMock = vi.mocked(request, true)
+
+            // When
+            await responseProvider(requestMock);
+
+            // Then
+            //TODO: Assert as much as possible on the Set-Cookie response header.
+            expect(createResponse).toHaveBeenCalledWith(302, {"Set-Cookie": expect.any(Array<String>), "Location": [oidcUrl]}, "")
+        })
+
     });
 });

@@ -8,11 +8,13 @@ export const mock_HttpResponse_json = vi.fn();
 export const mock_HttpResponse_getHeader = vi.fn();
 export const mock_HttpResponse_getHeaders = vi.fn();
 export const mock_HttpResponse_get = vi.fn();
+export const mock_HttpResponse_status = vi.fn();
+export const mock_HttpResponse_ok = vi.fn();
 
 export const HttpResponse = vi.fn().mockImplementation(() => {
     return {
-        status: 200,
-        ok: true,
+        status: mock_HttpResponse_status,
+        ok: mock_HttpResponse_ok,
         headers: {},
         body: new ReadableStream(),
         text: mock_HttpResponse_text,

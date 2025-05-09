@@ -3,8 +3,10 @@ import { vi } from 'vitest';
 // This array can be imported by your test file if you need to inspect instances.
 export const mockSetCookieInstances: any[] = [];
 
+export const mockedCookiesGetFunction = vi.fn()
+
 export const Cookies = vi.fn().mockImplementation(() => ({
-  get: vi.fn(),
+  get: mockedCookiesGetFunction,
   add: vi.fn(),
   toHeader: vi.fn(() => [])
 }));

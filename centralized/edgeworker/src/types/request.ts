@@ -66,15 +66,15 @@ class ResponseProviderRequestImpl implements ResponseProviderRequest {
 
     // From ReadsBody
     text(): Promise<string> {
-        return Promise.resolve("")
+        throw new Error('Not yet implemented')
     }
 
     json(): Promise<any> {
-        return Promise.resolve(undefined)
+        throw new Error('Not yet implemented')
     }
 
     arrayBuffer(): Promise<ArrayBuffer> {
-        return Promise.resolve(undefined)
+        throw new Error('Not yet implemented')
     }
 
     // From ReadsHeaders
@@ -91,14 +91,13 @@ class ResponseProviderRequestImpl implements ResponseProviderRequest {
 
     // From ReadAllHeader
     getHeaders(): Headers {
-        throw new Error("Method not implemented.");
+        throw new Error('Not yet implemented')
     }
 
     // From ReadsVariables
     getVariable(name: string): string {
         return this.variables.get(name);
     }
-
 }
 
 export class ResponseProviderRequestBuilder {

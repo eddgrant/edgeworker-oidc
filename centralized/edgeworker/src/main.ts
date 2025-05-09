@@ -7,13 +7,12 @@ Purpose:  OpenID Connect login  verification at the edge
 */
 /// <reference types="akamai-edgeworkers"/>
 
-// TODO: Get all the imports uncommented and working.
-//import { httpRequest } from 'http-request';
+import { httpRequest } from 'http-request';
 import { createResponse } from 'create-response';
-//import URLSearchParams from 'url-search-params';
+import URLSearchParams from 'url-search-params';
 import { Cookies, SetCookie } from 'cookies';
 import ResponseProviderRequest = EW.ResponseProviderRequest;
-//import { EdgeAuth } from "./auth/edgeauth.js";
+import { EdgeAuth } from "./auth/edgeauth.js";
 
 type OIDCContext = {
   basedir: string;
@@ -225,7 +224,6 @@ export async function responseProvider(request: ResponseProviderRequest) {
   }
 
   if (request.path.endsWith('/callback')) {
-    // TODO: Work through this, write a test for it and get it all working.
     return oidcCallback(oidcContext, request);
   }
 
