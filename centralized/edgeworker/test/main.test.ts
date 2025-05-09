@@ -11,6 +11,16 @@ const responseHeaders = new Map<string, string>([
     ["x-foo", "x-bar"]
 ]);
 const notFoundStatusCode = 404;
+const host = "www.marksandspencer.com";
+const basePath = "/mands/";
+const akamaiSecret = "This is my Akamai Secret"
+const clientId = "This is my Client Id"
+const secret = "This is my Secret"
+const authScheme = "https"
+const authHost = "www.this-is-my-auth-url.com"
+const authPath = "/foo"
+const authUrl = `${authScheme}://${authHost}${authPath}`
+const oidcUrl = "https://this-is-my-oidc-url.com/"
 
 describe('OIDC Response Provider', () => {
 
@@ -44,20 +54,10 @@ describe('OIDC Response Provider', () => {
         vi.mock('response')
         vi.mock('cookies')
 
-        const host = "www.marksandspencer.com";
-        const basePath = "/mands/";
-        const path = `${basePath}login`;
-        const akamaiSecret = "This is my Akamai Secret"
-        const clientId = "This is my Client Id"
-        const secret = "This is my Secret"
-        const authScheme = "https"
-        const authHost = "www.this-is-my-auth-url.com"
-        const authPath = "/foo"
-        const authUrl = `${authScheme}://${authHost}${authPath}`
-        const oidcUrl = "https://this-is-my-oidc-url.com/"
+        const loginPath = `${basePath}login`;
         const request = new ResponseProviderRequestBuilder()
             .withHost(host)
-            .withPath(path)
+            .withPath(loginPath)
             .withQueryParam("url", oidcUrl)
             .withVariable("PMUSER_MANDS_AKSECRET", akamaiSecret)
             .withVariable("PMUSER_MANDS_CLIENTID", clientId)
@@ -68,6 +68,7 @@ describe('OIDC Response Provider', () => {
 
         // When
         const returnedResponse : any = await responseProvider(requestMock);
+        //TODO: Would it be valuable to make assertions on the returnedResponse?
 
         // Then
         const createResponseCalls = createResponse.mock.calls
@@ -100,5 +101,56 @@ describe('OIDC Response Provider', () => {
         expect(locationResponseHeader.searchParams.get("scope")).toMatch("openid email")
 
         const providedBody = createResponseCallArguments[2]
+        expect(providedBody).toEqual("")
+    });
+
+    it("A request to /callback returns a 400 response when no 'code' query parameter is provided", async () => {
+        // Given
+        vi.mock('create-response')
+
+        const callbackPath = `${basePath}callback`;
+        const request = new ResponseProviderRequestBuilder()
+            .withHost(host)
+            .withPath(callbackPath)
+            .withQueryParam("url", oidcUrl)
+            .build()
+        const requestMock = vi.mocked(request, true)
+
+        // When
+        const returnedResponse : any = await responseProvider(requestMock);
+
+        // Then
+        const expectedResponseBody = {
+            error: "precondition",
+            description: `callback request not initiated, redirect-url:/, query:${request.query}`
+        }
+        expect(createResponse).toHaveBeenCalledWith(400, {'content-type': ['application/json']}, JSON.stringify(expectedResponseBody))
+    })
+
+    it("A request to /callback should return an OIDC callback response", async () => {
+        //TODO: Implement this test.
+
+        // Given
+        vi.mock('create-response')
+        // TODO: Mock cookies.get("oidcurl")
+        // TODO: Mock params.get("code")
+        // TODO: Mock request.getHeader('Cookie')
+        const callbackPath = `${basePath}callback`;
+        const request = new ResponseProviderRequestBuilder()
+            .withHost(host)
+            .withPath(callbackPath)
+            .withQueryParam("url", oidcUrl)
+            .withVariable("PMUSER_MANDS_AKSECRET", akamaiSecret)
+            .withVariable("PMUSER_MANDS_CLIENTID", clientId)
+            .withVariable("PMUSER_MANDS_SECRET", secret)
+            .withVariable("PMUSER_MANDS_AUTH_URL", authUrl)
+            .build()
+        const requestMock = vi.mocked(request, true)
+
+        // When
+        const returnedResponse : any = await responseProvider(requestMock);
+        //TODO: Would it be valuable to make assertions on the returnedResponse?
+
+        // Then
     });
 });

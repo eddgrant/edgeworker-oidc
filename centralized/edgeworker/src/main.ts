@@ -7,6 +7,7 @@ Purpose:  OpenID Connect login  verification at the edge
 */
 /// <reference types="akamai-edgeworkers"/>
 
+// TODO: Get all the imports uncommented and working.
 //import { httpRequest } from 'http-request';
 import { createResponse } from 'create-response';
 //import URLSearchParams from 'url-search-params';
@@ -55,6 +56,7 @@ function newCookie(name: string, val: string, path: string) {
   });
 }
 
+// TODO: Can we replace this with Buffer.from(base64Encoded, 'base64').toString() ?
 // Edgeworks don't support atob(), so we have to implement it ourselves
 function decodeBase64url(s) {
   var e={},i,b=0,c,x,l=0,a,r='',w=String.fromCharCode,L=s.length;
@@ -65,7 +67,7 @@ function decodeBase64url(s) {
       while(l>=8){((a=(b>>>(l-=8))&0xff)||(x<(L-2)))&&(r+=w(a));}
   }
   return r;
-};
+}
 
 // Unpack the jwt - note: we should verify the signature (not possible in edgeworkers and as we request the token directly we can skip that step)
 function jwt2json(s) {
@@ -223,6 +225,7 @@ export async function responseProvider(request: ResponseProviderRequest) {
   }
 
   if (request.path.endsWith('/callback')) {
+    // TODO: Work through this, write a test for it and get it all working.
     return oidcCallback(oidcContext, request);
   }
 
